@@ -1,16 +1,45 @@
-<input id="steamid" placeholder="SteamID64" />
-<button onclick="buscar()">Buscar inventário</button>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>CS Inventory Viewer</title>
+</head>
+<body>
 
-<pre id="out"></pre>
+  <input id="steamid" placeholder="SteamID64" />
+  <button onclick="loadInventory()">Buscar inventário</button>
 
-<script>
-async function buscar() {
-  const steamid = document.getElementById("steamid").value;
+  <pre id="output"></pre>
 
-  const res = await fetch(`/.netlify/functions/inventory?steamid=${steamid}`);
-  const data = await res.json();
+  <script>
+    async function loadInventory() {
+      const steamid = document.getElementById("steamid").value.trim();
+      const output = document.getElementById("output");
 
-  document.getElementById("out").textContent =
-    JSON.stringify(data, null, 2);
-}
-</script>
+      output.textContent = "Carregando...";
+
+      try {
+        const res = await fetch(
+          `https://steamcommunity.com/inventory/${steamid}/730/2?l=english&count=5000`,
+          {
+            credentials: "include" // 🔥 ISSO É O SEGREDO
+          }
+        );
+
+        const data = await res.json();
+
+        if (!data || !data.assets) {
+          output.textContent = "Inventário privado ou Steam retornou null.";
+          return;
+        }
+
+        output.textContent = JSON.stringify(data, null, 2);
+
+      } catch (err) {
+        output.textContent = "Erro: " + err.message;
+      }
+    }
+  </script>
+
+</body>
+</html>
