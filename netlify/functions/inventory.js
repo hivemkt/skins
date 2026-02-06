@@ -9,31 +9,23 @@ export async function handler(event) {
       };
     }
 
-    const url = `https://steamcommunity.com/inventory/${steamId}/730/2?l=english&count=5000`;
+    const url =
+      `https://steamcommunity.com/inventory/${steamId}/730/2` +
+      `?l=english&count=5000&start_assetid=0`;
 
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0",
-        "Accept": "application/json",
-        "Referer": "https://steamcommunity.com/"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Accept": "application/json,text/plain,*/*",
+        "Accept-Encoding": "gzip",
+        "Referer": "https://steamcommunity.com/my/inventory/"
       }
     });
 
-    // 🚨 Steam retorna 400 quando inventário é privado
-    if (!response.ok) {
-      return {
-        statusCode: 403,
-        body: JSON.stringify({
-          error: "Inventário privado ou indisponível",
-          status: response.status
-        })
-      };
-    }
+    // Steam costuma responder 400 mesmo com inventário público
+    const rawText = await response.text();
 
-    const data = await response.json();
-
-    // Steam pode retornar null
-    if (!data || !data.assets || !data.descriptions) {
+    if (!rawText || rawText === "null") {
       return {
         statusCode: 403,
         body: JSON.stringify({
@@ -42,28 +34,51 @@ export async function handler(event) {
       };
     }
 
-    // 🔗 normalização assets + descriptions
-    const descriptionsMap = {};
-    for (const d of data.descriptions) {
-      descriptionsMap[`${d.classid}_${d.instanceid}`] = d;
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      return {
+        statusCode: 502,
+        body: JSON.stringify({
+          error: "Resposta inválida da Steam"
+        })
+      };
     }
 
-    const items = data.assets.map(asset => {
-      const key = `${asset.classid}_${asset.instanceid}`;
-      const desc = descriptionsMap[key];
-
-      if (!desc) return null;
-
+    if (!data.assets || !data.descriptions) {
       return {
-        assetid: asset.assetid,
-        name: desc.market_hash_name,
-        image: `https://community.cloudflare.steamstatic.com/economy/image/${desc.icon_url}/360fx360f`,
-        tradable: desc.tradable === 1,
-        marketable: desc.marketable === 1,
-        rarity: desc.tags?.find(t => t.category === "Rarity")?.localized_tag_name || "Unknown",
-        type: desc.type
+        statusCode: 403,
+        body: JSON.stringify({
+          error: "Inventário indisponível"
+        })
       };
-    }).filter(Boolean);
+    }
+
+    // 🔗 normalização
+    const descMap = {};
+    for (const d of data.descriptions) {
+      descMap[`${d.classid}_${d.instanceid}`] = d;
+    }
+
+    const items = data.assets
+      .map(asset => {
+        const desc = descMap[`${asset.classid}_${asset.instanceid}`];
+        if (!desc) return null;
+
+        return {
+          assetid: asset.assetid,
+          name: desc.market_hash_name,
+          image: `https://community.cloudflare.steamstatic.com/economy/image/${desc.icon_url}/360fx360f`,
+          tradable: desc.tradable === 1,
+          marketable: desc.marketable === 1,
+          type: desc.type,
+          rarity:
+            desc.tags?.find(t => t.category === "Rarity")
+              ?.localized_tag_name || "Unknown"
+        };
+      })
+      .filter(Boolean);
 
     return {
       statusCode: 200,
