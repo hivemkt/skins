@@ -1,82 +1,93 @@
 export async function handler(event) {
   try {
     const steamId = event.queryStringParameters?.steamid;
+
     if (!steamId) {
-      return { statusCode: 400, body: JSON.stringify({ error: "steamid ausente" }) };
-    }
-
-    let assets = [];
-    let descriptions = [];
-    let startAssetId = "0";
-    let more = true;
-
-    while (more) {
-      const url =
-        `https://steamcommunity.com/inventory/${steamId}/730/2` +
-        `?l=english&count=5000&start_assetid=${startAssetId}`;
-
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          "Accept": "application/json",
-          "Referer": "https://steamcommunity.com/"
-        }
-      });
-
-      const text = await res.text();
-      if (!text || text === "null") break;
-
-      const data = JSON.parse(text);
-
-      if (data.success !== 1) break;
-
-      if (Array.isArray(data.assets)) {
-        assets.push(...data.assets);
-      }
-
-      if (Array.isArray(data.descriptions)) {
-        descriptions.push(...data.descriptions);
-      }
-
-      more = data.more_items === true;
-      startAssetId = data.last_assetid;
-    }
-
-    if (assets.length === 0) {
       return {
-        statusCode: 403,
-        body: JSON.stringify({ error: "Inventário vazio ou privado" })
+        statusCode: 400,
+        body: JSON.stringify({ error: "steamid ausente" })
       };
     }
 
-    // 🔗 normalizar
+    const url =
+      `https://steamcommunity.com/inventory/${steamId}/730/2` +
+      `?l=english&count=5000&start_assetid=0`;
+
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json",
+        "Referer": "https://steamcommunity.com/"
+      }
+    });
+
+    const raw = await res.text();
+
+    // 🚨 ÚNICO caso de erro real
+    if (!raw || raw === "null") {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          ok: false,
+          reason: "Steam retornou null",
+          items: []
+        })
+      };
+    }
+
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          ok: false,
+          reason: "Resposta não JSON da Steam",
+          raw
+        })
+      };
+    }
+
+    // 🔎 se não tiver assets, DEVOLVE MESMO ASSIM
+    if (!Array.isArray(data.assets) || !Array.isArray(data.descriptions)) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          ok: true,
+          note: "JSON válido, mas sem assets ainda",
+          steam: data
+        })
+      };
+    }
+
+    // 🔗 normalização segura
     const descMap = {};
-    for (const d of descriptions) {
+    for (const d of data.descriptions) {
       descMap[`${d.classid}_${d.instanceid}`] = d;
     }
 
-    const items = assets
-      .map(a => {
-        const d = descMap[`${a.classid}_${a.instanceid}`];
-        if (!d) return null;
+    const items = data.assets.map(a => {
+      const d = descMap[`${a.classid}_${a.instanceid}`];
+      if (!d) return null;
 
-        return {
-          assetid: a.assetid,
-          name: d.market_hash_name,
-          image: `https://community.cloudflare.steamstatic.com/economy/image/${d.icon_url}/360fx360f`,
-          tradable: d.tradable === 1,
-          marketable: d.marketable === 1,
-          type: d.type,
-          rarity:
-            d.tags?.find(t => t.category === "Rarity")
-              ?.localized_tag_name || "Unknown"
-        };
-      })
-      .filter(Boolean);
+      return {
+        assetid: a.assetid,
+        name: d.market_hash_name,
+        image: `https://community.cloudflare.steamstatic.com/economy/image/${d.icon_url}/360fx360f`,
+        tradable: d.tradable === 1,
+        marketable: d.marketable === 1,
+        type: d.type,
+        rarity:
+          d.tags?.find(t => t.category === "Rarity")
+            ?.localized_tag_name || "Unknown"
+      };
+    }).filter(Boolean);
 
     return {
       statusCode: 200,
       body: JSON.stringify({
+        ok: true,
         total: items.length,
         items
       })
