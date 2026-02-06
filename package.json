@@ -1,8 +1,5 @@
 {
-  "name": "steam-inventory-viewer",
+  "name": "steam-inventory",
   "version": "1.0.0",
-  "type": "commonjs",
-  "dependencies": {
-    "axios": "^1.6.7"
-  }
+  "type": "module"
 }
