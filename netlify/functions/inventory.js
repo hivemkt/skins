@@ -1,46 +1,58 @@
-export async function handler(event) {
-  const { steamid } = event.queryStringParameters || {};
+function partnerToSteamID64(partner) {
+  return (BigInt(partner) + 76561197960265728n).toString();
+}
 
-  if (!steamid) {
+export async function handler(event) {
+  const { tradeurl, steamid } = event.queryStringParameters || {};
+
+  let steamid64 = steamid;
+
+  // Se vier trade URL
+  if (!steamid64 && tradeurl) {
+    const match = tradeurl.match(/partner=(\d+)/);
+    if (!match) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          ok: false,
+          reason: "Trade URL inválida",
+          items: []
+        })
+      };
+    }
+    steamid64 = partnerToSteamID64(match[1]);
+  }
+
+  if (!steamid64) {
     return {
       statusCode: 400,
       body: JSON.stringify({
         ok: false,
-        reason: "SteamID não informado",
+        reason: "SteamID ou TradeURL não informado",
         items: []
       })
     };
   }
 
-  const url = `https://steamcommunity.com/inventory/${steamid}/730/2?l=english&count=5000`;
+  const url = `https://steamcommunity.com/inventory/${steamid64}/730/2?l=english&count=5000`;
 
   try {
-    const response = await fetch(url, {
+    const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0",
         "Accept": "application/json"
       }
     });
 
-    if (response.status === 403) {
+    const text = await res.text();
+
+    if (!text || text === "null") {
       return {
         statusCode: 403,
         body: JSON.stringify({
           ok: false,
-          reason: "Inventário privado ou bloqueado",
-          items: []
-        })
-      };
-    }
-
-    const text = await response.text();
-
-    if (!text || text === "null") {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({
-          ok: false,
-          reason: "Steam retornou null",
+          reason: "Inventário privado ou inexistente",
+          steamid64,
           items: []
         })
       };
@@ -68,8 +80,7 @@ export async function handler(event) {
 
       return {
         assetid: asset.assetid,
-        classid: asset.classid,
-        name: desc?.market_name || "Item desconhecido",
+        name: desc?.market_name || "Unknown",
         icon: desc
           ? `https://community.cloudflare.steamstatic.com/economy/image/${desc.icon_url}`
           : null,
@@ -81,6 +92,8 @@ export async function handler(event) {
       statusCode: 200,
       body: JSON.stringify({
         ok: true,
+        steamid64,
+        total: items.length,
         items
       })
     };
