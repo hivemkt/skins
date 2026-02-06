@@ -1,69 +1,44 @@
-const fetch = require('node-fetch');
-
-const STEAM_BASE = 76561197960265728n;
+const axios = require("axios");
 
 exports.handler = async (event) => {
   try {
-    if (event.httpMethod !== 'POST') {
-      return { statusCode: 405, body: 'Method Not Allowed' };
-    }
+    const steamId = event.queryStringParameters?.steamid;
 
-    const { tradeUrl } = JSON.parse(event.body || '{}');
-
-    const match = tradeUrl?.match(/partner=(\d+)/);
-    if (!match) {
+    if (!steamId) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Trade URL inválida' })
+        body: JSON.stringify({ error: "steamid é obrigatório" }),
       };
     }
 
-    const steamid64 = (BigInt(match[1]) + STEAM_BASE).toString();
-    const url = `https://steamcommunity.com/inventory/${steamid64}/730/2?l=english&count=5000`;
+    // CS2 = appid 730
+    const url = `https://steamcommunity.com/inventory/${steamId}/730/2?l=english&count=5000`;
 
-    const res = await fetch(url, {
+    const response = await axios.get(url, {
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0 Safari/537.36',
-        'Accept': '*/*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'https://steamcommunity.com/'
+        "User-Agent": "Mozilla/5.0"
       },
       timeout: 10000
     });
 
-    if (!res.ok) {
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          private: true,
-          message: 'Inventário privado ou indisponível'
-        })
-      };
-    }
-
-    const data = await res.json();
-
-    if (!data?.assets) {
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          private: true,
-          message: 'Inventário vazio ou bloqueado'
-        })
-      };
-    }
-
     return {
       statusCode: 200,
-      body: JSON.stringify(data)
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(response.data)
     };
 
-  } catch (err) {
-    console.error('ERRO FINAL:', err);
+  } catch (error) {
+    console.error("STEAM ERROR:", error?.response?.data || error.message);
+
     return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Erro interno' })
+      statusCode: error.response?.status || 500,
+      body: JSON.stringify({
+        error: "Erro ao buscar inventário",
+        details: error.response?.data || error.message
+      })
     };
   }
 };
