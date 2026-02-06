@@ -1,27 +1,16 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8" />
-  <title>Steam Inventory Viewer</title>
-</head>
-<body>
-  <h1>Inventário CS2</h1>
+<input id="steamid" placeholder="SteamID64" />
+<button onclick="buscar()">Buscar inventário</button>
 
-  <input id="steamid" placeholder="SteamID64" />
-  <button onclick="loadInventory()">Buscar</button>
+<pre id="out"></pre>
 
-  <pre id="output"></pre>
+<script>
+async function buscar() {
+  const steamid = document.getElementById("steamid").value;
 
-  <script>
-    async function loadInventory() {
-      const steamid = document.getElementById("steamid").value;
+  const res = await fetch(`/.netlify/functions/inventory?steamid=${steamid}`);
+  const data = await res.json();
 
-      const res = await fetch(`/.netlify/functions/inventory?steamid=${steamid}`);
-      const data = await res.json();
-
-      document.getElementById("output").textContent =
-        JSON.stringify(data, null, 2);
-    }
-  </script>
-</body>
-</html>
+  document.getElementById("out").textContent =
+    JSON.stringify(data, null, 2);
+}
+</script>
