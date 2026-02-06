@@ -1,74 +1,27 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>CS2 Inventory Viewer</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: white;
-      padding: 40px;
-    }
-    input, button {
-      padding: 10px;
-      width: 400px;
-      margin-bottom: 10px;
-    }
-    .item {
-      display: flex;
-      align-items: center;
-      margin: 10px 0;
-      background: #020617;
-      padding: 10px;
-      border-radius: 8px;
-    }
-    img {
-      margin-right: 10px;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Steam Inventory Viewer</title>
 </head>
 <body>
+  <h1>Inventário CS2</h1>
 
-<h1>🎒 Inventário CS2</h1>
+  <input id="steamid" placeholder="SteamID64" />
+  <button onclick="loadInventory()">Buscar</button>
 
-<input id="tradeUrl" placeholder="Cole sua Trade URL da Steam">
-<br>
-<button onclick="buscar()">Buscar Inventário</button>
+  <pre id="output"></pre>
 
-<div id="items"></div>
+  <script>
+    async function loadInventory() {
+      const steamid = document.getElementById("steamid").value;
 
-<script>
-async function buscar() {
-  const tradeUrl = document.getElementById('tradeUrl').value;
-  const itemsDiv = document.getElementById('items');
-  itemsDiv.innerHTML = 'Carregando...';
+      const res = await fetch(`/.netlify/functions/inventory?steamid=${steamid}`);
+      const data = await res.json();
 
-  const res = await fetch('/.netlify/functions/inventory', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tradeUrl })
-  });
-
-  const data = await res.json();
-  itemsDiv.innerHTML = '';
-
-  if (!data.descriptions) {
-    itemsDiv.innerText = 'Inventário privado ou vazio.';
-    return;
-  }
-
-  data.descriptions.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'item';
-    div.innerHTML = `
-      <img src="https://steamcommunity-a.akamaihd.net/economy/image/${item.icon_url}/100fx100f">
-      <div>${item.market_name}</div>
-    `;
-    itemsDiv.appendChild(div);
-  });
-}
-</script>
-
+      document.getElementById("output").textContent =
+        JSON.stringify(data, null, 2);
+    }
+  </script>
 </body>
 </html>
