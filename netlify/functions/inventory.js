@@ -3,78 +3,58 @@ const axios = require('axios');
 const STEAM_BASE = 76561197960265728n;
 
 exports.handler = async (event) => {
-  console.log('EVENT:', event);
-
   try {
     if (event.httpMethod !== 'POST') {
-      console.log('Método inválido:', event.httpMethod);
-      return {
-        statusCode: 405,
-        body: 'Method Not Allowed'
-      };
+      return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    if (!event.body) {
-      console.log('Body vazio');
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Body vazio' })
-      };
-    }
+    const { tradeUrl } = JSON.parse(event.body || '{}');
 
-    const parsedBody = JSON.parse(event.body);
-    console.log('BODY PARSED:', parsedBody);
-
-    const tradeUrl = parsedBody.tradeUrl;
-    if (!tradeUrl) {
-      console.log('Trade URL não enviada');
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Trade URL não enviada' })
-      };
-    }
-
-    const match = tradeUrl.match(/partner=(\d+)/);
+    const match = tradeUrl?.match(/partner=(\d+)/);
     if (!match) {
-      console.log('Trade URL inválida:', tradeUrl);
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'Trade URL inválida' })
       };
     }
 
-    const partner = BigInt(match[1]);
-    const steamid64 = (partner + STEAM_BASE).toString();
-    console.log('STEAMID64:', steamid64);
+    const steamid64 = (BigInt(match[1]) + STEAM_BASE).toString();
 
     const url = `https://steamcommunity.com/inventory/${steamid64}/730/2?l=english&count=5000`;
-    console.log('STEAM URL:', url);
 
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0',
-        'Accept': 'application/json'
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0 Safari/537.36',
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://steamcommunity.com/'
       },
+      validateStatus: () => true, // 👈 NÃO deixa o axios quebrar
       timeout: 10000
     });
 
-    console.log('STEAM STATUS:', response.status);
+    // 👉 Steam respondeu mas não liberou
+    if (response.status !== 200 || !response.data?.assets) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          private: true,
+          message: 'Inventário privado ou indisponível'
+        })
+      };
+    }
 
     return {
       statusCode: 200,
       body: JSON.stringify(response.data)
     };
 
-  } catch (error) {
-    console.error('ERRO REAL:', error);
-    console.error('STACK:', error.stack);
-
+  } catch (err) {
+    console.error('ERRO FINAL:', err);
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: 'Erro interno',
-        message: error.message
-      })
+      body: JSON.stringify({ error: 'Erro interno' })
     };
   }
 };
