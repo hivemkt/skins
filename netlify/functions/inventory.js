@@ -1,4 +1,4 @@
-const axios = require('axios');
+const fetch = require('node-fetch');
 
 const STEAM_BASE = 76561197960265728n;
 
@@ -21,38 +21,42 @@ exports.handler = async (event) => {
     const steamid64 = (BigInt(match[1]) + STEAM_BASE).toString();
     const url = `https://steamcommunity.com/inventory/${steamid64}/730/2?l=english&count=5000`;
 
-    let response;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0 Safari/537.36',
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://steamcommunity.com/'
+      },
+      timeout: 10000
+    });
 
-    try {
-      response = await axios.get(url, {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0 Safari/537.36',
-          'Accept': '*/*',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Referer': 'https://steamcommunity.com/'
-        },
-        timeout: 10000
-      });
-    } catch (axiosError) {
-      // 👇 AQUI ESTÁ A CHAVE
-      response = axiosError.response;
-    }
-
-    // Steam bloqueou / inventário privado / resposta inválida
-    if (!response || response.status !== 200 || !response.data?.assets) {
+    if (!res.ok) {
       return {
         statusCode: 200,
         body: JSON.stringify({
           private: true,
-          message: 'Inventário privado, inexistente ou bloqueado pela Steam'
+          message: 'Inventário privado ou indisponível'
+        })
+      };
+    }
+
+    const data = await res.json();
+
+    if (!data?.assets) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          private: true,
+          message: 'Inventário vazio ou bloqueado'
         })
       };
     }
 
     return {
       statusCode: 200,
-      body: JSON.stringify(response.data)
+      body: JSON.stringify(data)
     };
 
   } catch (err) {
