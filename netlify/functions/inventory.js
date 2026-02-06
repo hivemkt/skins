@@ -1,106 +1,78 @@
-export async function handler(event) {
+import fetch from "node-fetch";
+
+export async function getSteamInventory(steamId64) {
+  const url = `https://steamcommunity.com/inventory/${steamId64}/730/2?l=english&count=5000`;
+
   try {
-    const steamId = event.queryStringParameters?.steamid;
-
-    if (!steamId) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "steamid ausente" })
-      };
-    }
-
-    const url =
-      `https://steamcommunity.com/inventory/${steamId}/730/2` +
-      `?l=english&count=5000&start_assetid=0`;
-
-    const res = await fetch(url, {
+    const response = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0",
-        "Accept": "application/json",
-        "Referer": "https://steamcommunity.com/"
+        "Accept": "application/json"
       }
     });
 
-    const raw = await res.text();
-
-    // 🚨 ÚNICO caso de erro real
-    if (!raw || raw === "null") {
+    if (response.status === 403) {
       return {
-        statusCode: 200,
-        body: JSON.stringify({
-          ok: false,
-          reason: "Steam retornou null",
-          items: []
-        })
+        ok: false,
+        status: 403,
+        reason: "Inventário privado ou Steam bloqueou a requisição",
+        items: []
       };
     }
 
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch {
+    const text = await response.text();
+
+    if (!text || text === "null") {
       return {
-        statusCode: 200,
-        body: JSON.stringify({
-          ok: false,
-          reason: "Resposta não JSON da Steam",
-          raw
-        })
+        ok: false,
+        status: 400,
+        reason: "Steam retornou null (inventário privado ou indisponível)",
+        items: []
       };
     }
 
-    // 🔎 se não tiver assets, DEVOLVE MESMO ASSIM
-    if (!Array.isArray(data.assets) || !Array.isArray(data.descriptions)) {
+    const data = JSON.parse(text);
+
+    if (!data.success) {
       return {
-        statusCode: 200,
-        body: JSON.stringify({
-          ok: true,
-          note: "JSON válido, mas sem assets ainda",
-          steam: data
-        })
+        ok: false,
+        status: 400,
+        reason: "Steam não retornou sucesso",
+        items: []
       };
     }
 
-    // 🔗 normalização segura
-    const descMap = {};
-    for (const d of data.descriptions) {
-      descMap[`${d.classid}_${d.instanceid}`] = d;
-    }
-
-    const items = data.assets.map(a => {
-      const d = descMap[`${a.classid}_${a.instanceid}`];
-      if (!d) return null;
+    // Mapeia itens
+    const items = data.assets.map(asset => {
+      const desc = data.descriptions.find(
+        d =>
+          d.classid === asset.classid &&
+          d.instanceid === asset.instanceid
+      );
 
       return {
-        assetid: a.assetid,
-        name: d.market_hash_name,
-        image: `https://community.cloudflare.steamstatic.com/economy/image/${d.icon_url}/360fx360f`,
-        tradable: d.tradable === 1,
-        marketable: d.marketable === 1,
-        type: d.type,
-        rarity:
-          d.tags?.find(t => t.category === "Rarity")
-            ?.localized_tag_name || "Unknown"
+        assetid: asset.assetid,
+        classid: asset.classid,
+        name: desc?.market_name || "Item desconhecido",
+        icon: desc
+          ? `https://community.cloudflare.steamstatic.com/economy/image/${desc.icon_url}`
+          : null,
+        tradable: desc?.tradable === 1
       };
-    }).filter(Boolean);
+    });
 
     return {
-      statusCode: 200,
-      body: JSON.stringify({
-        ok: true,
-        total: items.length,
-        items
-      })
+      ok: true,
+      status: 200,
+      items
     };
-
   } catch (err) {
-    console.error("ERRO REAL:", err);
     return {
-      statusCode: 500,
-      body: JSON.stringify({
-        error: "Erro interno",
-        details: err.message
-      })
+      ok: false,
+      status: 500,
+      reason: "Erro interno ao consultar Steam",
+      error: err.message,
+      items: []
     };
   }
 }
