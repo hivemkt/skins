@@ -1,44 +1,87 @@
-const axios = require("axios");
-
-exports.handler = async (event) => {
+export async function handler(event) {
   try {
     const steamId = event.queryStringParameters?.steamid;
 
     if (!steamId) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "steamid é obrigatório" }),
+        body: JSON.stringify({ error: "steamid ausente" })
       };
     }
 
-    // CS2 = appid 730
     const url = `https://steamcommunity.com/inventory/${steamId}/730/2?l=english&count=5000`;
 
-    const response = await axios.get(url, {
+    const response = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0"
-      },
-      timeout: 10000
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json",
+        "Referer": "https://steamcommunity.com/"
+      }
     });
+
+    // 🚨 Steam retorna 400 quando inventário é privado
+    if (!response.ok) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({
+          error: "Inventário privado ou indisponível",
+          status: response.status
+        })
+      };
+    }
+
+    const data = await response.json();
+
+    // Steam pode retornar null
+    if (!data || !data.assets || !data.descriptions) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({
+          error: "Inventário privado ou vazio"
+        })
+      };
+    }
+
+    // 🔗 normalização assets + descriptions
+    const descriptionsMap = {};
+    for (const d of data.descriptions) {
+      descriptionsMap[`${d.classid}_${d.instanceid}`] = d;
+    }
+
+    const items = data.assets.map(asset => {
+      const key = `${asset.classid}_${asset.instanceid}`;
+      const desc = descriptionsMap[key];
+
+      if (!desc) return null;
+
+      return {
+        assetid: asset.assetid,
+        name: desc.market_hash_name,
+        image: `https://community.cloudflare.steamstatic.com/economy/image/${desc.icon_url}/360fx360f`,
+        tradable: desc.tradable === 1,
+        marketable: desc.marketable === 1,
+        rarity: desc.tags?.find(t => t.category === "Rarity")?.localized_tag_name || "Unknown",
+        type: desc.type
+      };
+    }).filter(Boolean);
 
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(response.data)
+      body: JSON.stringify({
+        total: items.length,
+        items
+      })
     };
 
-  } catch (error) {
-    console.error("STEAM ERROR:", error?.response?.data || error.message);
+  } catch (err) {
+    console.error("ERRO REAL:", err);
 
     return {
-      statusCode: error.response?.status || 500,
+      statusCode: 500,
       body: JSON.stringify({
-        error: "Erro ao buscar inventário",
-        details: error.response?.data || error.message
+        error: "Erro interno",
+        details: err.message
       })
     };
   }
-};
+}
