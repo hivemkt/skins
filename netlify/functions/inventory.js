@@ -1,7 +1,18 @@
-import fetch from "node-fetch";
+export async function handler(event) {
+  const { steamid } = event.queryStringParameters || {};
 
-export async function getSteamInventory(steamId64) {
-  const url = `https://steamcommunity.com/inventory/${steamId64}/730/2?l=english&count=5000`;
+  if (!steamid) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({
+        ok: false,
+        reason: "SteamID não informado",
+        items: []
+      })
+    };
+  }
+
+  const url = `https://steamcommunity.com/inventory/${steamid}/730/2?l=english&count=5000`;
 
   try {
     const response = await fetch(url, {
@@ -13,10 +24,12 @@ export async function getSteamInventory(steamId64) {
 
     if (response.status === 403) {
       return {
-        ok: false,
-        status: 403,
-        reason: "Inventário privado ou Steam bloqueou a requisição",
-        items: []
+        statusCode: 403,
+        body: JSON.stringify({
+          ok: false,
+          reason: "Inventário privado ou bloqueado",
+          items: []
+        })
       };
     }
 
@@ -24,10 +37,12 @@ export async function getSteamInventory(steamId64) {
 
     if (!text || text === "null") {
       return {
-        ok: false,
-        status: 400,
-        reason: "Steam retornou null (inventário privado ou indisponível)",
-        items: []
+        statusCode: 400,
+        body: JSON.stringify({
+          ok: false,
+          reason: "Steam retornou null",
+          items: []
+        })
       };
     }
 
@@ -35,14 +50,15 @@ export async function getSteamInventory(steamId64) {
 
     if (!data.success) {
       return {
-        ok: false,
-        status: 400,
-        reason: "Steam não retornou sucesso",
-        items: []
+        statusCode: 400,
+        body: JSON.stringify({
+          ok: false,
+          reason: "Steam não retornou sucesso",
+          items: []
+        })
       };
     }
 
-    // Mapeia itens
     const items = data.assets.map(asset => {
       const desc = data.descriptions.find(
         d =>
@@ -62,17 +78,21 @@ export async function getSteamInventory(steamId64) {
     });
 
     return {
-      ok: true,
-      status: 200,
-      items
+      statusCode: 200,
+      body: JSON.stringify({
+        ok: true,
+        items
+      })
     };
   } catch (err) {
     return {
-      ok: false,
-      status: 500,
-      reason: "Erro interno ao consultar Steam",
-      error: err.message,
-      items: []
+      statusCode: 500,
+      body: JSON.stringify({
+        ok: false,
+        reason: "Erro interno",
+        error: err.message,
+        items: []
+      })
     };
   }
 }
