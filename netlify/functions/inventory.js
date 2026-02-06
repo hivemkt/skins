@@ -1,80 +1,74 @@
 export async function handler(event) {
   try {
     const steamId = event.queryStringParameters?.steamid;
-
     if (!steamId) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "steamid ausente" })
-      };
+      return { statusCode: 400, body: JSON.stringify({ error: "steamid ausente" }) };
     }
 
-    const url =
-      `https://steamcommunity.com/inventory/${steamId}/730/2` +
-      `?l=english&count=5000&start_assetid=0`;
+    let assets = [];
+    let descriptions = [];
+    let startAssetId = "0";
+    let more = true;
 
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Accept": "application/json,text/plain,*/*",
-        "Accept-Encoding": "gzip",
-        "Referer": "https://steamcommunity.com/my/inventory/"
+    while (more) {
+      const url =
+        `https://steamcommunity.com/inventory/${steamId}/730/2` +
+        `?l=english&count=5000&start_assetid=${startAssetId}`;
+
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "application/json",
+          "Referer": "https://steamcommunity.com/"
+        }
+      });
+
+      const text = await res.text();
+      if (!text || text === "null") break;
+
+      const data = JSON.parse(text);
+
+      if (data.success !== 1) break;
+
+      if (Array.isArray(data.assets)) {
+        assets.push(...data.assets);
       }
-    });
 
-    // Steam costuma responder 400 mesmo com inventário público
-    const rawText = await response.text();
+      if (Array.isArray(data.descriptions)) {
+        descriptions.push(...data.descriptions);
+      }
 
-    if (!rawText || rawText === "null") {
+      more = data.more_items === true;
+      startAssetId = data.last_assetid;
+    }
+
+    if (assets.length === 0) {
       return {
         statusCode: 403,
-        body: JSON.stringify({
-          error: "Inventário privado ou vazio"
-        })
+        body: JSON.stringify({ error: "Inventário vazio ou privado" })
       };
     }
 
-    let data;
-    try {
-      data = JSON.parse(rawText);
-    } catch {
-      return {
-        statusCode: 502,
-        body: JSON.stringify({
-          error: "Resposta inválida da Steam"
-        })
-      };
-    }
-
-    if (!data.assets || !data.descriptions) {
-      return {
-        statusCode: 403,
-        body: JSON.stringify({
-          error: "Inventário indisponível"
-        })
-      };
-    }
-
-    // 🔗 normalização
+    // 🔗 normalizar
     const descMap = {};
-    for (const d of data.descriptions) {
+    for (const d of descriptions) {
       descMap[`${d.classid}_${d.instanceid}`] = d;
     }
 
-    const items = data.assets
-      .map(asset => {
-        const desc = descMap[`${asset.classid}_${asset.instanceid}`];
-        if (!desc) return null;
+    const items = assets
+      .map(a => {
+        const d = descMap[`${a.classid}_${a.instanceid}`];
+        if (!d) return null;
 
         return {
-          assetid: asset.assetid,
-          name: desc.market_hash_name,
-          image: `https://community.cloudflare.steamstatic.com/economy/image/${desc.icon_url}/360fx360f`,
-          tradable: desc.tradable === 1,
-          marketable: desc.marketable === 1,
-          type: desc.type,
+          assetid: a.assetid,
+          name: d.market_hash_name,
+          image: `https://community.cloudflare.steamstatic.com/economy/image/${d.icon_url}/360fx360f`,
+          tradable: d.tradable === 1,
+          marketable: d.marketable === 1,
+          type: d.type,
           rarity:
-            desc.tags?.find(t => t.category === "Rarity")
+            d.tags?.find(t => t.category === "Rarity")
               ?.localized_tag_name || "Unknown"
         };
       })
@@ -90,7 +84,6 @@ export async function handler(event) {
 
   } catch (err) {
     console.error("ERRO REAL:", err);
-
     return {
       statusCode: 500,
       body: JSON.stringify({
