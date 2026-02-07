@@ -24,86 +24,104 @@ exports.handler = async (event) => {
 
   try {
     const url = `https://steamcommunity.com/inventory/${steamId}/730/2?l=english&count=5000`;
-    console.log('Buscando:', url);
+    console.log('📡 URL:', url);
     
     const data = await new Promise((resolve, reject) => {
-      https.get(url, {
+      const req = https.get(url, {
         headers: { 
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'application/json',
-          'Accept-Encoding': 'gzip, deflate',
-          'Accept-Language': 'en-US,en;q=0.9'
+          'Accept': '*/*'
         }
       }, (res) => {
-        console.log('Status code:', res.statusCode);
-        console.log('Content-Encoding:', res.headers['content-encoding']);
+        console.log('📊 Status:', res.statusCode);
+        console.log('📦 Content-Type:', res.headers['content-type']);
+        console.log('🗜️ Content-Encoding:', res.headers['content-encoding']);
         
         const chunks = [];
-        let stream = res;
-        const encoding = res.headers['content-encoding'];
+        let responseStream = res;
         
-        if (encoding === 'gzip') {
-          console.log('Descomprimindo gzip...');
-          stream = res.pipe(zlib.createGunzip());
-        } else if (encoding === 'deflate') {
-          console.log('Descomprimindo deflate...');
-          stream = res.pipe(zlib.createInflate());
+        // Só descomprimir se necessário
+        if (res.headers['content-encoding'] === 'gzip') {
+          console.log('✅ Descomprimindo GZIP');
+          responseStream = res.pipe(zlib.createGunzip());
+        } else if (res.headers['content-encoding'] === 'deflate') {
+          console.log('✅ Descomprimindo DEFLATE');
+          responseStream = res.pipe(zlib.createInflate());
+        } else {
+          console.log('⚪ Sem compressão');
         }
         
-        stream.on('data', chunk => {
+        responseStream.on('data', chunk => {
+          console.log('📥 Chunk recebido:', chunk.length, 'bytes');
           chunks.push(chunk);
         });
         
-        stream.on('end', () => {
+        responseStream.on('end', () => {
+          console.log('✅ Stream finalizado');
+          console.log('📊 Total de chunks:', chunks.length);
+          
+          if (chunks.length === 0) {
+            console.error('❌ Nenhum chunk recebido!');
+            reject(new Error('Resposta vazia'));
+            return;
+          }
+          
           try {
-            const bodyText = Buffer.concat(chunks).toString('utf8');
-            console.log('Body length:', bodyText.length);
-            console.log('Body start:', bodyText.substring(0, 100));
+            const buffer = Buffer.concat(chunks);
+            console.log('📦 Buffer total:', buffer.length, 'bytes');
             
-            if (!bodyText || bodyText.length === 0) {
-              reject(new Error('Resposta vazia da Steam'));
-              return;
-            }
+            const text = buffer.toString('utf8');
+            console.log('📝 Text length:', text.length);
+            console.log('👀 Primeiros 200 chars:', text.substring(0, 200));
+            console.log('👀 Últimos 100 chars:', text.substring(text.length - 100));
             
-            const jsonData = JSON.parse(bodyText);
-            console.log('JSON parseado! Keys:', Object.keys(jsonData));
+            // Tentar parse
+            const json = JSON.parse(text);
+            console.log('✅ JSON parseado!');
+            console.log('🔑 Keys:', Object.keys(json).join(', '));
+            console.log('📊 Has assets?', !!json.assets);
+            console.log('📊 Assets length?', json.assets?.length);
             
-            if (jsonData.success === false) {
-              console.log('Success = false');
-            }
+            resolve(json);
             
-            resolve(jsonData);
-          } catch (parseError) {
-            console.error('Erro no parse:', parseError.message);
-            reject(new Error('JSON inválido da Steam'));
+          } catch (parseErr) {
+            console.error('❌ Erro no parse JSON:', parseErr.message);
+            console.error('❌ Parse stack:', parseErr.stack);
+            reject(new Error('Falha ao parsear JSON'));
           }
         });
         
-        stream.on('error', (streamError) => {
-          console.error('Erro no stream:', streamError.message);
-          reject(streamError);
+        responseStream.on('error', (err) => {
+          console.error('❌ Erro no stream:', err.message);
+          reject(err);
         });
-        
-      }).on('error', (reqError) => {
-        console.error('Erro na requisição:', reqError.message);
-        reject(reqError);
+      });
+      
+      req.on('error', (err) => {
+        console.error('❌ Erro na request:', err.message);
+        reject(err);
+      });
+      
+      req.setTimeout(10000, () => {
+        console.error('❌ Timeout!');
+        req.destroy();
+        reject(new Error('Timeout'));
       });
     });
 
-    console.log('Data type:', typeof data);
-    console.log('Data null?', data === null);
-    console.log('Has assets?', data && 'assets' in data);
+    console.log('🎉 Dados recebidos com sucesso!');
     
-    if (!data) {
+    if (!data || typeof data !== 'object') {
+      console.error('❌ Data não é objeto válido');
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ error: 'Resposta vazia da Steam' })
+        body: JSON.stringify({ error: 'Resposta inválida da Steam' })
       };
     }
 
     if (data.error) {
-      console.error('Steam error:', data.error);
+      console.log('⚠️ Steam retornou erro:', data.error);
       return {
         statusCode: 400,
         headers,
@@ -114,19 +132,18 @@ exports.handler = async (event) => {
       };
     }
 
-    if (!data.assets || data.assets.length === 0) {
-      console.log('Sem assets');
+    if (!data.assets || !Array.isArray(data.assets) || data.assets.length === 0) {
+      console.log('⚠️ Sem assets');
       return {
         statusCode: 404,
         headers,
         body: JSON.stringify({ 
-          error: 'Nenhum item encontrado',
-          message: 'Inventário vazio ou privado'
+          error: 'Nenhum item encontrado'
         })
       };
     }
 
-    console.log('✅ Sucesso! Total:', data.assets.length);
+    console.log('🎮 Total de itens:', data.assets.length);
 
     return {
       statusCode: 200,
@@ -139,12 +156,13 @@ exports.handler = async (event) => {
     };
 
   } catch (error) {
-    console.error('❌ Erro geral:', error.message);
+    console.error('💥 ERRO FINAL:', error.message);
+    console.error('💥 Stack:', error.stack);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
-        error: error.message
+        error: error.message || 'Erro desconhecido'
       })
     };
   }
