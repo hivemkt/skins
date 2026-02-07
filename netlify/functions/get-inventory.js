@@ -23,7 +23,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const url = `https://steamcommunity.com/inventory/${steamId}/730/2?l=english&count=5000`;
+    const url = `https://steamcommunity.com/inventory/${steamId}/730/2`;
     console.log('📡 URL:', url);
     
     const data = await new Promise((resolve, reject) => {
