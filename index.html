@@ -3,501 +3,695 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualizador de Inventário Steam CS2</title>
+    <title>Bôrjão Skins - Inventário</title>
     <style>
+        @font-face {
+            font-family: 'Kenyan Coffee';
+            src: url('fonts/KENYAN_COFFEE_RG.TTF') format('truetype');
+        }
+
+        @font-face {
+            font-family: 'Orbitron';
+            src: url('fonts/Orbitron-VariableFont_wght.ttf') format('truetype');
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        :root {
+            --purple: #9431ce;
+            --purple-glow: rgba(148, 49, 206, 0.4);
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Rajdhani', -apple-system, sans-serif;
+            background: #000;
+            color: white;
             min-height: 100vh;
-            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(148, 49, 206, 0.1) 0%, transparent 50%);
+        }
+
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background-image: 
+                linear-gradient(rgba(148, 49, 206, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 49, 206, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
         }
 
         .container {
-            max-width: 1200px;
+            position: relative;
+            z-index: 2;
+            max-width: 1400px;
             margin: 0 auto;
+            padding: 40px 20px;
         }
 
         .header {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 30px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+            cursor: pointer;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 20px var(--purple-glow));
         }
 
         h1 {
-            color: #333;
+            font-family: 'Kenyan Coffee', sans-serif;
+            color: var(--purple);
+            font-size: 48px;
+            text-shadow: 0 0 30px var(--purple-glow);
             margin-bottom: 10px;
-            text-align: center;
-            font-size: 28px;
         }
 
         .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 25px;
             font-size: 14px;
-        }
-
-        .step-container {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .step {
-            margin-bottom: 20px;
-        }
-
-        .step-number {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 50%;
-            font-weight: bold;
-            margin-right: 12px;
-            font-size: 16px;
-        }
-
-        .step-title {
-            font-weight: 600;
-            color: #333;
-            font-size: 16px;
-            margin-bottom: 8px;
-        }
-
-        .step-content {
-            margin-left: 44px;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 15px;
-            transition: border-color 0.3s;
-            font-family: inherit;
-        }
-
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .link-display {
-            background: white;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-top: 10px;
-            word-break: break-all;
-            display: none;
-        }
-
-        .link-display.show {
-            display: block;
-        }
-
-        .link-display a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .link-display a:hover {
-            text-decoration: underline;
-        }
-
-        .copy-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 8px;
-            transition: transform 0.2s;
-        }
-
-        .copy-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        textarea {
-            width: 100%;
-            min-height: 180px;
-            padding: 12px 16px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: 'Courier New', monospace;
-            resize: vertical;
-            transition: border-color 0.3s;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .load-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 10px;
-        }
-
-        .load-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .load-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
         .items-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
         }
 
         .item-card {
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            transition: all 0.3s;
+            background: linear-gradient(135deg, rgba(148, 49, 206, 0.1), rgba(148, 49, 206, 0.02));
+            border: 2px solid rgba(148, 49, 206, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            animation: slideIn 0.5s ease backwards;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .item-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(148, 49, 206, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .item-card:hover::before {
+            left: 100%;
         }
 
         .item-card:hover {
+            border-color: var(--purple);
+            box-shadow: 0 10px 30px var(--purple-glow);
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .item-image {
             width: 100%;
-            height: 150px;
+            height: 200px;
             object-fit: contain;
-            margin-bottom: 10px;
-            background: #f5f5f5;
-            border-radius: 8px;
+            margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            border: 1px solid rgba(148, 49, 206, 0.2);
+            padding: 10px;
         }
 
         .item-name {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-            font-size: 14px;
-            min-height: 40px;
-            line-height: 1.3;
+            font-weight: 700;
+            color: white;
+            font-size: 16px;
+            margin-bottom: 8px;
+            min-height: 45px;
+            line-height: 1.4;
         }
 
-        .item-type {
-            color: #666;
-            font-size: 12px;
-            margin-bottom: 5px;
+        .item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border-left: 3px solid var(--purple);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+        .info-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: var(--purple);
+            font-weight: 700;
+            font-family: 'Orbitron', monospace;
         }
 
         .item-rarity {
             display: inline-block;
-            padding: 4px 10px;
+            padding: 6px 14px;
             border-radius: 20px;
             font-size: 11px;
             font-weight: bold;
-            margin-top: 5px;
+            margin-bottom: 12px;
             color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .error, .success {
-            padding: 18px;
-            border-radius: 10px;
-            text-align: center;
-            margin: 20px 0;
-            display: none;
-            font-weight: 500;
+        .item-actions {
+            display: flex;
+            gap: 8px;
+            flex-direction: column;
         }
 
-        .error {
-            background: #fee;
-            color: #c33;
-            border: 2px solid #fcc;
-        }
-
-        .success {
-            background: #efe;
-            color: #2a7c2a;
-            border: 2px solid #cfc;
-        }
-
-        .stats {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            display: none;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            text-align: center;
-        }
-
-        .stat-item {
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .btn {
+            padding: 10px 16px;
+            border: 2px solid;
             border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-inspect {
+            background: linear-gradient(135deg, var(--purple), #6b1fa0);
             color: white;
+            border-color: var(--purple);
         }
 
-        .stat-value {
+        .btn-inspect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px var(--purple-glow);
+        }
+
+        .btn-whatsapp {
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+            border-color: #25D366;
+        }
+
+        .btn-whatsapp:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        /* Admin Button */
+        .admin-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.1);
+            border: none;
+            padding: 10px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 999;
+            opacity: 0.15;
+        }
+
+        .admin-btn:hover {
+            opacity: 1;
+            color: var(--purple);
+            transform: rotate(90deg);
+            background: rgba(148, 49, 206, 0.1);
+        }
+
+        /* Admin Panel */
+        .admin-panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 40px 20px;
+        }
+
+        .admin-panel.active {
+            display: block;
+        }
+
+        .admin-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(20, 20, 20, 0.95);
+            border: 2px solid var(--purple);
+            border-radius: 15px;
+            padding: 30px;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--purple);
+            padding-bottom: 20px;
+        }
+
+        .admin-title {
+            font-family: 'Kenyan Coffee', sans-serif;
             font-size: 32px;
-            font-weight: bold;
-            margin-bottom: 5px;
+            color: var(--purple);
         }
 
-        .stat-label {
-            font-size: 13px;
-            opacity: 0.95;
+        .close-btn {
+            background: rgba(255, 0, 0, 0.2);
+            border: 2px solid #ff0000;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
 
-        code {
-            background: #f5f5f5;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            color: #d63384;
+        .close-btn:hover {
+            background: rgba(255, 0, 0, 0.4);
+            transform: scale(1.05);
         }
 
-        .tip {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
+        .admin-form {
+            background: rgba(148, 49, 206, 0.1);
+            border: 2px solid var(--purple);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .admin-form h3 {
+            color: var(--purple);
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .admin-form input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--purple);
+            color: white;
             padding: 12px 16px;
-            border-radius: 6px;
-            margin-top: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
             font-size: 14px;
-            color: #856404;
+            font-family: 'Rajdhani', sans-serif;
         }
 
-        .tip strong {
-            color: #856404;
+        .admin-form input:focus {
+            outline: none;
+            box-shadow: 0 0 15px var(--purple-glow);
+        }
+
+        .btn-load {
+            width: 100%;
+            background: linear-gradient(135deg, var(--purple), #6b1fa0);
+            border: 2px solid var(--purple);
+            color: white;
+            padding: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-load:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px var(--purple-glow);
+        }
+
+        .btn-load:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .admin-status {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 4px solid var(--purple);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .status-success {
+            border-left-color: #25D366;
+            color: #25D366;
+        }
+
+        .status-error {
+            border-left-color: #ff0000;
+            color: #ff6b81;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 32px;
+            }
+
+            .items-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 20px;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="bg-animation"></div>
+    <div class="grid-overlay"></div>
+
     <div class="container">
         <div class="header">
-            <h1>🎮 Visualizador de Inventário Steam CS2</h1>
-            <p class="subtitle">Veja todos os seus itens de forma organizada e visual</p>
-            
-            <div class="step-container">
-                <div class="step">
-                    <div class="step-title">
-                        <span class="step-number">1</span>
-                        Cole seu Trade URL da Steam
-                    </div>
-                    <div class="step-content">
-                        <input type="text" id="tradeUrl" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=123456&token=XXXXX" oninput="generateLink()">
-                        <div id="linkDisplay" class="link-display"></div>
-                    </div>
+            <a href="index.html" style="text-decoration: none;">
+                <div class="logo">
+                    <img src="images/logodb.png" alt="Logo Borjão Skins" onerror="this.style.display='none'">
                 </div>
-
-                <div class="step">
-                    <div class="step-title">
-                        <span class="step-number">2</span>
-                        Copie o JSON do seu inventário
-                    </div>
-                    <div class="step-content">
-                        <div class="tip">
-                            💡 <strong>Clique no link azul acima</strong> que vai aparecer, uma nova aba vai abrir mostrando seus itens em formato JSON. Aperte <code>Ctrl+A</code> para selecionar tudo, depois <code>Ctrl+C</code> para copiar.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="step">
-                    <div class="step-title">
-                        <span class="step-number">3</span>
-                        Cole o JSON aqui e carregue
-                    </div>
-                    <div class="step-content">
-                        <textarea id="jsonInput" placeholder='Cole aqui todo o conteúdo que você copiou da página do inventário...'></textarea>
-                        <button class="load-btn" onclick="loadItems()">🚀 Carregar Meus Itens</button>
-                    </div>
-                </div>
-            </div>
+            </a>
+            <h1>🎮 INVENTÁRIO</h1>
+            <p class="subtitle">Skins disponíveis para venda</p>
         </div>
 
-        <div class="error" id="error"></div>
-        <div class="success" id="success"></div>
-
-        <div class="stats" id="stats">
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <div class="stat-value" id="totalItems">0</div>
-                    <div class="stat-label">Total de Itens</div>
-                </div>
-            </div>
+        <div id="emptyState" class="empty-state">
+            <div class="empty-icon">🎯</div>
+            <h3 style="margin-bottom: 10px; color: rgba(255,255,255,0.6);">Nenhuma skin disponível no momento</h3>
+            <p>Em breve teremos novidades!</p>
         </div>
 
         <div class="items-grid" id="itemsGrid"></div>
     </div>
 
+    <!-- Admin Panel -->
+    <div class="admin-panel" id="adminPanel">
+        <div class="admin-container">
+            <div class="admin-header">
+                <h2 class="admin-title">⚙️ Painel Admin</h2>
+                <button class="close-btn" onclick="closeAdmin()">✕ Fechar</button>
+            </div>
+
+            <div class="admin-form">
+                <h3>📦 Carregar Inventário</h3>
+                <input type="text" id="adminTradeUrl" placeholder="Cole o Trade URL da Steam aqui">
+                <button class="btn-load" onclick="loadInventoryAdmin()" id="btnLoadAdmin">
+                    🚀 Carregar e Salvar Inventário
+                </button>
+                <div id="adminStatus" class="admin-status" style="display: none;"></div>
+            </div>
+
+            <div class="admin-form">
+                <h3>📊 Configurações WhatsApp</h3>
+                <input type="text" id="whatsappNumber" placeholder="Número WhatsApp (ex: 5511999999999)" value="5511999999999">
+                <button class="btn-load" onclick="saveWhatsapp()">💾 Salvar Número</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="admin-btn" onclick="openAdmin()" title="Admin">⚙️</button>
+
     <script>
-        function generateLink() {
-            const tradeUrl = document.getElementById('tradeUrl').value.trim();
-            const linkDisplay = document.getElementById('linkDisplay');
-            
-            if (!tradeUrl) {
-                linkDisplay.classList.remove('show');
+        const ADMIN_PASSWORD = 'borjao777';
+        const STORAGE_KEY = 'borjao_inventory';
+        const WHATSAPP_KEY = 'borjao_whatsapp';
+
+        // Abrir admin
+        function openAdmin() {
+            const password = prompt('🔐 Digite a senha:');
+            if (password !== ADMIN_PASSWORD) {
+                alert('❌ Senha incorreta!');
                 return;
             }
+            document.getElementById('adminPanel').classList.add('active');
+            loadAdminSettings();
+        }
 
+        function closeAdmin() {
+            document.getElementById('adminPanel').classList.remove('active');
+        }
+
+        function loadAdminSettings() {
+            const whatsapp = localStorage.getItem(WHATSAPP_KEY) || '5511999999999';
+            document.getElementById('whatsappNumber').value = whatsapp;
+        }
+
+        function saveWhatsapp() {
+            const number = document.getElementById('whatsappNumber').value.trim();
+            if (!number) {
+                alert('❌ Digite um número válido!');
+                return;
+            }
+            localStorage.setItem(WHATSAPP_KEY, number);
+            alert('✅ Número do WhatsApp salvo!');
+        }
+
+        // Extrair SteamID
+        function extractSteamID(tradeUrl) {
             const match = tradeUrl.match(/partner=(\d+)/);
-            if (!match) {
-                linkDisplay.innerHTML = '<span style="color: #c33;">❌ Trade URL inválido</span>';
-                linkDisplay.classList.add('show');
+            if (match) {
+                const partnerId = match[1];
+                return (BigInt(partnerId) + BigInt('76561197960265728')).toString();
+            }
+            return null;
+        }
+
+        // Carregar inventário no admin
+        async function loadInventoryAdmin() {
+            const tradeUrl = document.getElementById('adminTradeUrl').value.trim();
+            const btn = document.getElementById('btnLoadAdmin');
+            const status = document.getElementById('adminStatus');
+
+            if (!tradeUrl) {
+                showAdminStatus('❌ Cole o Trade URL!', 'error');
                 return;
             }
 
-            const partnerId = match[1];
-            const steamId64 = (BigInt(partnerId) + BigInt('76561197960265728')).toString();
-            const inventoryUrl = `https://steamcommunity.com/inventory/${steamId64}/730/2`;
+            const steamId = extractSteamID(tradeUrl);
+            if (!steamId) {
+                showAdminStatus('❌ Trade URL inválido!', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            showAdminStatus('⏳ Carregando inventário...', '');
+
+            try {
+                const response = await fetch(`/.netlify/functions/get-inventory?steamId=${steamId}`);
+                
+                if (!response.ok) {
+                    const result = await response.json();
+                    throw new Error(result.error || result.message || 'Erro ao carregar');
+                }
+
+                const result = await response.json();
+                const data = result.data;
+
+                if (!data || !data.assets || data.assets.length === 0) {
+                    throw new Error('Nenhum item encontrado no inventário');
+                }
+
+                // Salvar no localStorage
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                
+                showAdminStatus(`✅ ${data.assets.length} itens carregados e salvos com sucesso!`, 'success');
+                
+                // Atualizar visualização pública
+                setTimeout(() => {
+                    closeAdmin();
+                    loadPublicInventory();
+                }, 1500);
+
+            } catch (err) {
+                console.error('Erro:', err);
+                showAdminStatus(`❌ Erro: ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function showAdminStatus(message, type) {
+            const status = document.getElementById('adminStatus');
+            status.textContent = message;
+            status.style.display = 'block';
+            status.className = 'admin-status';
+            if (type === 'success') status.classList.add('status-success');
+            if (type === 'error') status.classList.add('status-error');
+        }
+
+        // Carregar inventário público (do localStorage)
+        function loadPublicInventory() {
+            const stored = localStorage.getItem(STORAGE_KEY);
             
-            linkDisplay.innerHTML = `
-                ✅ <strong>Clique aqui para abrir seu inventário:</strong><br>
-                <a href="${inventoryUrl}" target="_blank">${inventoryUrl}</a>
-                <br>
-                <button class="copy-btn" onclick="copyLink('${inventoryUrl}')">📋 Copiar Link</button>
-            `;
-            linkDisplay.classList.add('show');
-        }
-
-        function copyLink(url) {
-            navigator.clipboard.writeText(url).then(() => {
-                alert('✅ Link copiado! Agora abra em uma nova aba.');
-            });
-        }
-
-        function loadItems() {
-            const jsonText = document.getElementById('jsonInput').value.trim();
-            const error = document.getElementById('error');
-            const success = document.getElementById('success');
-            const itemsGrid = document.getElementById('itemsGrid');
-            const stats = document.getElementById('stats');
-
-            // Limpar
-            error.style.display = 'none';
-            success.style.display = 'none';
-            itemsGrid.innerHTML = '';
-            stats.style.display = 'none';
-
-            if (!jsonText) {
-                showError('❌ Cole o JSON do inventário no campo acima');
+            if (!stored) {
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('itemsGrid').innerHTML = '';
                 return;
             }
 
             try {
-                const data = JSON.parse(jsonText);
-                
-                if (!data.assets || !data.descriptions) {
-                    throw new Error('JSON inválido - certifique-se de copiar TODO o conteúdo da página');
-                }
-
-                if (data.assets.length === 0) {
-                    showError('⚠️ Nenhum item encontrado no inventário');
-                    return;
-                }
-
+                const data = JSON.parse(stored);
                 displayItems(data.assets, data.descriptions);
-                showSuccess(`✅ ${data.assets.length} itens carregados com sucesso!`);
-                stats.style.display = 'block';
-
-                // Scroll suave até os itens
-                setTimeout(() => {
-                    stats.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }, 100);
-
             } catch (err) {
-                showError(`❌ Erro ao processar JSON: ${err.message}<br><br>Certifique-se de copiar <strong>TODO</strong> o conteúdo da página do inventário (Ctrl+A, Ctrl+C)`);
+                console.error('Erro ao carregar do storage:', err);
+                document.getElementById('emptyState').style.display = 'block';
             }
         }
 
         function displayItems(assets, descriptions) {
-            const itemsGrid = document.getElementById('itemsGrid');
-            const totalItems = document.getElementById('totalItems');
+            const grid = document.getElementById('itemsGrid');
+            const emptyState = document.getElementById('emptyState');
             
-            totalItems.textContent = assets.length;
+            grid.innerHTML = '';
+            emptyState.style.display = 'none';
 
             const descMap = {};
             descriptions.forEach(desc => {
                 descMap[`${desc.classid}_${desc.instanceid}`] = desc;
             });
 
-            assets.forEach(asset => {
+            const whatsapp = localStorage.getItem(WHATSAPP_KEY) || '5511999999999';
+
+            assets.forEach((asset, index) => {
                 const desc = descMap[`${asset.classid}_${asset.instanceid}`];
                 if (!desc) return;
 
                 const card = document.createElement('div');
                 card.className = 'item-card';
+                card.style.animationDelay = `${index * 0.05}s`;
 
                 const imageUrl = desc.icon_url 
                     ? `https://community.cloudflare.steamstatic.com/economy/image/${desc.icon_url}`
                     : '';
+
+                // Extrair informações
+                const itemName = desc.market_name || desc.name;
+                const itemType = desc.type || 'Item';
                 
+                // Extrair float (se disponível nas tags)
+                let floatValue = 'N/A';
+                const wearTag = desc.tags?.find(t => t.category === 'Exterior');
+                if (wearTag) {
+                    floatValue = wearTag.localized_tag_name || 'N/A';
+                }
+
+                // Raridade
                 const rarityTag = desc.tags?.find(t => t.category === 'Rarity');
                 const rarityName = rarityTag?.localized_tag_name || 'Normal';
                 const rarityColor = desc.name_color ? '#' + desc.name_color : '#b0b0b0';
-                
+
+                // Link de inspeção
+                const inspectLink = desc.actions?.[0]?.link || null;
+                const inspectBtn = inspectLink 
+                    ? `<a href="${inspectLink.replace('%owner_steamid%', asset.owner || '').replace('%assetid%', asset.assetid)}" target="_blank" class="btn btn-inspect">🔍 Inspecionar</a>`
+                    : '';
+
+                // WhatsApp
+                const whatsappMsg = encodeURIComponent(`Olá! Tenho interesse na skin: ${itemName}`);
+                const whatsappLink = `https://wa.me/${whatsapp}?text=${whatsappMsg}`;
+
                 card.innerHTML = `
-                    <img src="${imageUrl}" alt="${desc.market_name || desc.name}" class="item-image" loading="lazy">
-                    <div class="item-name">${desc.market_name || desc.name}</div>
-                    <div class="item-type">${desc.type || 'Item'}</div>
+                    <img src="${imageUrl}" alt="${itemName}" class="item-image" loading="lazy">
+                    <div class="item-name">${itemName}</div>
                     <div class="item-rarity" style="background-color: ${rarityColor}">${rarityName}</div>
+                    <div class="item-info">
+                        <div class="info-row">
+                            <span class="info-label">Tipo:</span>
+                            <span class="info-value">${itemType}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Condição:</span>
+                            <span class="info-value">${floatValue}</span>
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        ${inspectBtn}
+                        <a href="${whatsappLink}" target="_blank" class="btn btn-whatsapp">
+                            💬 Entrar em Contato
+                        </a>
+                    </div>
                 `;
 
-                itemsGrid.appendChild(card);
+                grid.appendChild(card);
             });
         }
 
-        function showError(message) {
-            const error = document.getElementById('error');
-            error.innerHTML = message;
-            error.style.display = 'block';
-            error.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-
-        function showSuccess(message) {
-            const success = document.getElementById('success');
-            success.innerHTML = message;
-            success.style.display = 'block';
-        }
+        // Carregar ao abrir página
+        loadPublicInventory();
     </script>
 </body>
 </html>
