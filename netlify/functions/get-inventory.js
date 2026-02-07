@@ -2,14 +2,12 @@ const https = require('https');
 const zlib = require('zlib');
 
 exports.handler = async (event) => {
-  // Headers CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json'
   };
 
-  // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
@@ -31,89 +29,93 @@ exports.handler = async (event) => {
     const data = await new Promise((resolve, reject) => {
       https.get(url, {
         headers: { 
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'application/json, text/plain, */*',
-          'Accept-Encoding': 'gzip, deflate, br',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json',
+          'Accept-Encoding': 'gzip, deflate',
           'Accept-Language': 'en-US,en;q=0.9'
         }
       }, (res) => {
-        console.log('Status:', res.statusCode);
-        console.log('Headers:', res.headers);
+        console.log('Status code:', res.statusCode);
+        console.log('Content-Encoding:', res.headers['content-encoding']);
         
         const chunks = [];
-        
-        // Criar stream de descompressão se necessário
         let stream = res;
         const encoding = res.headers['content-encoding'];
         
         if (encoding === 'gzip') {
-          console.log('Descomprimindo gzip');
+          console.log('Descomprimindo gzip...');
           stream = res.pipe(zlib.createGunzip());
         } else if (encoding === 'deflate') {
-          console.log('Descomprimindo deflate');
+          console.log('Descomprimindo deflate...');
           stream = res.pipe(zlib.createInflate());
-        } else if (encoding === 'br') {
-          console.log('Descomprimindo brotli');
-          stream = res.pipe(zlib.createBrotliDecompress());
         }
         
-        stream.on('data', chunk => chunks.push(chunk));
+        stream.on('data', chunk => {
+          chunks.push(chunk);
+        });
         
         stream.on('end', () => {
           try {
-            const body = Buffer.concat(chunks).toString('utf8');
-            console.log('Body length:', body.length);
-            console.log('Body preview:', body.substring(0, 200));
+            const bodyText = Buffer.concat(chunks).toString('utf8');
+            console.log('Body length:', bodyText.length);
+            console.log('Body start:', bodyText.substring(0, 100));
             
-            const jsonData = JSON.parse(body);
-            console.log('JSON parseado com sucesso');
-            console.log('Keys:', Object.keys(jsonData));
+            if (!bodyText || bodyText.length === 0) {
+              reject(new Error('Resposta vazia da Steam'));
+              return;
+            }
+            
+            const jsonData = JSON.parse(bodyText);
+            console.log('JSON parseado! Keys:', Object.keys(jsonData));
+            
+            if (jsonData.success === false) {
+              console.log('Success = false');
+            }
             
             resolve(jsonData);
-          } catch (e) {
-            console.error('Erro ao fazer parse:', e.message);
-            console.error('Body recebido:', body.substring(0, 500));
-            reject(new Error('Resposta inválida da Steam'));
+          } catch (parseError) {
+            console.error('Erro no parse:', parseError.message);
+            reject(new Error('JSON inválido da Steam'));
           }
         });
         
-        stream.on('error', (err) => {
-          console.error('Erro no stream:', err.message);
-          reject(err);
+        stream.on('error', (streamError) => {
+          console.error('Erro no stream:', streamError.message);
+          reject(streamError);
         });
         
-      }).on('error', (err) => {
-        console.error('Erro na requisição:', err.message);
-        reject(err);
+      }).on('error', (reqError) => {
+        console.error('Erro na requisição:', reqError.message);
+        reject(reqError);
       });
     });
 
-    console.log('Data recebido:', data ? 'OK' : 'NULL');
+    console.log('Data type:', typeof data);
+    console.log('Data null?', data === null);
+    console.log('Has assets?', data && 'assets' in data);
     
     if (!data) {
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ error: 'Steam retornou resposta vazia' })
+        body: JSON.stringify({ error: 'Resposta vazia da Steam' })
       };
     }
 
-    // Verificar se tem erro da Steam
     if (data.error) {
-      console.error('Erro da Steam:', data.error);
+      console.error('Steam error:', data.error);
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({ 
           error: data.error,
-          message: 'Inventário privado ou erro da Steam'
+          message: 'Inventário privado ou inacessível'
         })
       };
     }
 
-    // Verificar se tem assets
     if (!data.assets || data.assets.length === 0) {
-      console.log('Nenhum asset encontrado');
+      console.log('Sem assets');
       return {
         statusCode: 404,
         headers,
@@ -124,7 +126,7 @@ exports.handler = async (event) => {
       };
     }
 
-    console.log('Sucesso! Total de itens:', data.assets.length);
+    console.log('✅ Sucesso! Total:', data.assets.length);
 
     return {
       statusCode: 200,
@@ -137,14 +139,12 @@ exports.handler = async (event) => {
     };
 
   } catch (error) {
-    console.error('Erro geral:', error.message);
-    console.error('Stack:', error.stack);
+    console.error('❌ Erro geral:', error.message);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
-        error: 'Erro ao buscar inventário',
-        message: error.message 
+        error: error.message
       })
     };
   }
