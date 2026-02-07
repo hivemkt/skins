@@ -1,305 +1,503 @@
-```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Visualizador de Inventário Steam</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Inventário Steam CS2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-:root {
-    --purple: #9431ce;
-    --black: #000000;
-    --dark-gray: #0a0a0a;
-    --purple-glow: rgba(148, 49, 206, 0.4);
-}
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
 
-body {
-    font-family: 'Rajdhani', sans-serif;
-    background: var(--black);
-    color: white;
-    min-height: 100vh;
-    overflow-x: hidden;
-}
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
 
-/* Background animado */
-.bg-animation {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-}
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 28px;
+        }
 
-.bg-animation::before {
-    content: '';
-    position: absolute;
-    width: 200%;
-    height: 200%;
-    top: -50%;
-    left: -50%;
-    background:
-        radial-gradient(circle at 20% 50%, var(--purple-glow), transparent 50%),
-        radial-gradient(circle at 80% 80%, var(--purple-glow), transparent 50%);
-    animation: rotateBg 20s linear infinite;
-}
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
 
-@keyframes rotateBg {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
+        .step-container {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
 
-.container {
-    position: relative;
-    z-index: 2;
-    max-width: 1200px;
-    margin: auto;
-    padding: 40px 20px;
-}
+        .step {
+            margin-bottom: 20px;
+        }
 
-.header {
-    background: rgba(10,10,10,0.8);
-    border: 2px solid rgba(148,49,206,0.3);
-    border-radius: 20px;
-    padding: 30px;
-    backdrop-filter: blur(10px);
-    margin-bottom: 30px;
-    text-align: center;
-}
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            margin-right: 12px;
+            font-size: 16px;
+        }
 
-h1 {
-    font-size: 32px;
-    color: var(--purple);
-    margin-bottom: 20px;
-}
+        .step-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
 
-.badge {
-    background: linear-gradient(135deg, var(--purple), #6b1fa0);
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-}
+        .step-content {
+            margin-left: 44px;
+        }
 
-.input-section {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
 
-input {
-    flex: 1;
-    padding: 12px;
-    background: rgba(255,255,255,0.05);
-    border: 2px solid rgba(148,49,206,0.3);
-    border-radius: 8px;
-    color: white;
-    font-size: 16px;
-}
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
 
-input:focus {
-    outline: none;
-    border-color: var(--purple);
-}
+        .link-display {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 10px;
+            word-break: break-all;
+            display: none;
+        }
 
-button {
-    padding: 12px 30px;
-    background: linear-gradient(135deg, var(--purple), #6b1fa0);
-    border: none;
-    border-radius: 8px;
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s;
-}
+        .link-display.show {
+            display: block;
+        }
 
-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px var(--purple-glow);
-}
+        .link-display a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
 
-.info {
-    background: rgba(148,49,206,0.1);
-    border-left: 4px solid var(--purple);
-    padding: 15px;
-    border-radius: 8px;
-    font-size: 14px;
-    margin-top: 10px;
-}
+        .link-display a:hover {
+            text-decoration: underline;
+        }
 
-/* Loading */
-.loading {
-    text-align: center;
-    padding: 40px;
-    display: none;
-}
+        .copy-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: transform 0.2s;
+        }
 
-.spinner {
-    border: 4px solid rgba(255,255,255,0.2);
-    border-top: 4px solid var(--purple);
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 1s linear infinite;
-    margin: auto;
-}
+        .copy-btn:hover {
+            transform: translateY(-2px);
+        }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
+        textarea {
+            width: 100%;
+            min-height: 180px;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
 
-/* Cards */
-.items-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
-}
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
 
-.item-card {
-    background: rgba(10,10,10,0.9);
-    border: 2px solid rgba(148,49,206,0.3);
-    border-radius: 15px;
-    padding: 15px;
-    transition: 0.3s;
-    backdrop-filter: blur(10px);
-}
+        .load-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
 
-.item-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px var(--purple-glow);
-    border-color: var(--purple);
-}
+        .load-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
 
-.item-image {
-    width: 100%;
-    height: 150px;
-    object-fit: contain;
-    background: rgba(255,255,255,0.05);
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
+        .load-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
 
-.item-name {
-    font-weight: bold;
-    font-size: 14px;
-    margin-bottom: 5px;
-}
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
 
-.item-type {
-    font-size: 12px;
-    opacity: 0.7;
-}
+        .item-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
 
-.item-rarity {
-    margin-top: 5px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: bold;
-    display: inline-block;
-    color: white;
-}
+        .item-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
 
-/* Alerts */
-.error, .success {
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-    margin: 20px 0;
-    display: none;
-}
+        .item-image {
+            width: 100%;
+            height: 150px;
+            object-fit: contain;
+            margin-bottom: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
 
-.error {
-    background: rgba(255,0,0,0.1);
-    border: 2px solid rgba(255,0,0,0.4);
-}
+        .item-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 14px;
+            min-height: 40px;
+            line-height: 1.3;
+        }
 
-.success {
-    background: rgba(0,255,136,0.1);
-    border: 2px solid rgba(0,255,136,0.4);
-}
+        .item-type {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
 
-/* Stats */
-.stats {
-    background: rgba(10,10,10,0.9);
-    border: 2px solid rgba(148,49,206,0.3);
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 20px;
-    display: none;
-}
+        .item-rarity {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-top: 5px;
+            color: white;
+        }
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 15px;
-    text-align: center;
-}
+        .error, .success {
+            padding: 18px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+            font-weight: 500;
+        }
 
-.stat-item {
-    background: rgba(148,49,206,0.1);
-    border: 2px solid var(--purple);
-    border-radius: 10px;
-    padding: 15px;
-}
+        .error {
+            background: #fee;
+            color: #c33;
+            border: 2px solid #fcc;
+        }
 
-.stat-value {
-    font-size: 24px;
-    font-weight: bold;
-    color: var(--purple);
-}
-</style>
+        .success {
+            background: #efe;
+            color: #2a7c2a;
+            border: 2px solid #cfc;
+        }
+
+        .stats {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            text-align: center;
+        }
+
+        .stat-item {
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            color: white;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            opacity: 0.95;
+        }
+
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #d63384;
+        }
+
+        .tip {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #856404;
+        }
+
+        .tip strong {
+            color: #856404;
+        }
+    </style>
 </head>
-
 <body>
-<div class="bg-animation"></div>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Visualizador de Inventário Steam CS2</h1>
+            <p class="subtitle">Veja todos os seus itens de forma organizada e visual</p>
+            
+            <div class="step-container">
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">1</span>
+                        Cole seu Trade URL da Steam
+                    </div>
+                    <div class="step-content">
+                        <input type="text" id="tradeUrl" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=123456&token=XXXXX" oninput="generateLink()">
+                        <div id="linkDisplay" class="link-display"></div>
+                    </div>
+                </div>
 
-<div class="container">
-    <div class="header">
-        <h1>🎮 Visualizador de Inventário Steam <span class="badge">AUTO</span></h1>
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">2</span>
+                        Copie o JSON do seu inventário
+                    </div>
+                    <div class="step-content">
+                        <div class="tip">
+                            💡 <strong>Clique no link azul acima</strong> que vai aparecer, uma nova aba vai abrir mostrando seus itens em formato JSON. Aperte <code>Ctrl+A</code> para selecionar tudo, depois <code>Ctrl+C</code> para copiar.
+                        </div>
+                    </div>
+                </div>
 
-        <div class="input-section">
-            <input type="text" id="tradeUrl" placeholder="Cole seu Trade URL aqui">
-            <button id="loadBtn" onclick="loadInventory()">Carregar</button>
-        </div>
-
-        <div class="info">
-            Cole seu Trade URL e carregue automaticamente seu inventário CS2.
-        </div>
-    </div>
-
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <p id="loadingText">Buscando inventário...</p>
-    </div>
-
-    <div class="error" id="error"></div>
-    <div class="success" id="success"></div>
-
-    <div class="stats" id="stats">
-        <div class="stats-grid">
-            <div class="stat-item">
-                <div class="stat-value" id="totalItems">0</div>
-                <div>Total de Itens</div>
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">3</span>
+                        Cole o JSON aqui e carregue
+                    </div>
+                    <div class="step-content">
+                        <textarea id="jsonInput" placeholder='Cole aqui todo o conteúdo que você copiou da página do inventário...'></textarea>
+                        <button class="load-btn" onclick="loadItems()">🚀 Carregar Meus Itens</button>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <div class="error" id="error"></div>
+        <div class="success" id="success"></div>
+
+        <div class="stats" id="stats">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalItems">0</div>
+                    <div class="stat-label">Total de Itens</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="items-grid" id="itemsGrid"></div>
     </div>
 
-    <div class="items-grid" id="itemsGrid"></div>
-</div>
+    <script>
+        function generateLink() {
+            const tradeUrl = document.getElementById('tradeUrl').value.trim();
+            const linkDisplay = document.getElementById('linkDisplay');
+            
+            if (!tradeUrl) {
+                linkDisplay.classList.remove('show');
+                return;
+            }
 
-<!-- SEU SCRIPT ORIGINAL (não alterado) -->
-<script>
-/* cole aqui o mesmo script que você já tinha */
-</script>
+            const match = tradeUrl.match(/partner=(\d+)/);
+            if (!match) {
+                linkDisplay.innerHTML = '<span style="color: #c33;">❌ Trade URL inválido</span>';
+                linkDisplay.classList.add('show');
+                return;
+            }
 
+            const partnerId = match[1];
+            const steamId64 = (BigInt(partnerId) + BigInt('76561197960265728')).toString();
+            const inventoryUrl = `https://steamcommunity.com/inventory/${steamId64}/730/2`;
+            
+            linkDisplay.innerHTML = `
+                ✅ <strong>Clique aqui para abrir seu inventário:</strong><br>
+                <a href="${inventoryUrl}" target="_blank">${inventoryUrl}</a>
+                <br>
+                <button class="copy-btn" onclick="copyLink('${inventoryUrl}')">📋 Copiar Link</button>
+            `;
+            linkDisplay.classList.add('show');
+        }
+
+        function copyLink(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                alert('✅ Link copiado! Agora abra em uma nova aba.');
+            });
+        }
+
+        function loadItems() {
+            const jsonText = document.getElementById('jsonInput').value.trim();
+            const error = document.getElementById('error');
+            const success = document.getElementById('success');
+            const itemsGrid = document.getElementById('itemsGrid');
+            const stats = document.getElementById('stats');
+
+            // Limpar
+            error.style.display = 'none';
+            success.style.display = 'none';
+            itemsGrid.innerHTML = '';
+            stats.style.display = 'none';
+
+            if (!jsonText) {
+                showError('❌ Cole o JSON do inventário no campo acima');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(jsonText);
+                
+                if (!data.assets || !data.descriptions) {
+                    throw new Error('JSON inválido - certifique-se de copiar TODO o conteúdo da página');
+                }
+
+                if (data.assets.length === 0) {
+                    showError('⚠️ Nenhum item encontrado no inventário');
+                    return;
+                }
+
+                displayItems(data.assets, data.descriptions);
+                showSuccess(`✅ ${data.assets.length} itens carregados com sucesso!`);
+                stats.style.display = 'block';
+
+                // Scroll suave até os itens
+                setTimeout(() => {
+                    stats.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+
+            } catch (err) {
+                showError(`❌ Erro ao processar JSON: ${err.message}<br><br>Certifique-se de copiar <strong>TODO</strong> o conteúdo da página do inventário (Ctrl+A, Ctrl+C)`);
+            }
+        }
+
+        function displayItems(assets, descriptions) {
+            const itemsGrid = document.getElementById('itemsGrid');
+            const totalItems = document.getElementById('totalItems');
+            
+            totalItems.textContent = assets.length;
+
+            const descMap = {};
+            descriptions.forEach(desc => {
+                descMap[`${desc.classid}_${desc.instanceid}`] = desc;
+            });
+
+            assets.forEach(asset => {
+                const desc = descMap[`${asset.classid}_${asset.instanceid}`];
+                if (!desc) return;
+
+                const card = document.createElement('div');
+                card.className = 'item-card';
+
+                const imageUrl = desc.icon_url 
+                    ? `https://community.cloudflare.steamstatic.com/economy/image/${desc.icon_url}`
+                    : '';
+                
+                const rarityTag = desc.tags?.find(t => t.category === 'Rarity');
+                const rarityName = rarityTag?.localized_tag_name || 'Normal';
+                const rarityColor = desc.name_color ? '#' + desc.name_color : '#b0b0b0';
+                
+                card.innerHTML = `
+                    <img src="${imageUrl}" alt="${desc.market_name || desc.name}" class="item-image" loading="lazy">
+                    <div class="item-name">${desc.market_name || desc.name}</div>
+                    <div class="item-type">${desc.type || 'Item'}</div>
+                    <div class="item-rarity" style="background-color: ${rarityColor}">${rarityName}</div>
+                `;
+
+                itemsGrid.appendChild(card);
+            });
+        }
+
+        function showError(message) {
+            const error = document.getElementById('error');
+            error.innerHTML = message;
+            error.style.display = 'block';
+            error.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function showSuccess(message) {
+            const success = document.getElementById('success');
+            success.innerHTML = message;
+            success.style.display = 'block';
+        }
+    </script>
 </body>
 </html>
-```
