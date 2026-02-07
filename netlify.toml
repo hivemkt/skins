@@ -1,6 +1,7 @@
 # Netlify configuration
 [build]
   publish = "."
+  command = ""
   functions = "netlify/functions"
   
 [[redirects]]
