@@ -1,5 +1,12 @@
 {
-  "name": "steam-inventory",
+  "name": "steam-inventory-viewer",
   "version": "1.0.0",
-  "type": "module"
+  "description": "Visualizador de inventário Steam CS2",
+  "main": "index.html",
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "keywords": ["steam", "cs2", "inventory", "viewer"],
+  "author": "",
+  "license": "MIT"
 }
